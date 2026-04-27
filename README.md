@@ -23,12 +23,13 @@ Download individual PowerShell scripts directly from the repository:
 
 | Script | Download |
 |---|---|
-| `Install-Server.ps1` | [⬇ Download](https://raw.githubusercontent.com/AaronSena2/PatchPlatform/main/deploy/Install-Server.ps1) |
-| `Uninstall-Server.ps1` | [⬇ Download](https://raw.githubusercontent.com/AaronSena2/PatchPlatform/main/deploy/Uninstall-Server.ps1) |
-| `Install-Agent.ps1` | [⬇ Download](https://raw.githubusercontent.com/AaronSena2/PatchPlatform/main/deploy/Install-Agent.ps1) |
-| `Uninstall-Agent.ps1` | [⬇ Download](https://raw.githubusercontent.com/AaronSena2/PatchPlatform/main/deploy/Uninstall-Agent.ps1) |
+| `Install-Server.ps1` | [⬇ Download](https://raw.githubusercontent.com/AaronSena2/PatchPlatform/copilot/add-net-8-solution-structure/deploy/Install-Server.ps1) |
+| `Uninstall-Server.ps1` | [⬇ Download](https://raw.githubusercontent.com/AaronSena2/PatchPlatform/copilot/add-net-8-solution-structure/deploy/Uninstall-Server.ps1) |
+| `Install-Agent.ps1` | [⬇ Download](https://raw.githubusercontent.com/AaronSena2/PatchPlatform/copilot/add-net-8-solution-structure/deploy/Install-Agent.ps1) |
+| `Uninstall-Agent.ps1` | [⬇ Download](https://raw.githubusercontent.com/AaronSena2/PatchPlatform/copilot/add-net-8-solution-structure/deploy/Uninstall-Agent.ps1) |
 
 > **Tip:** Use the release packages for production. Use the raw scripts when deploying from a source build (`dotnet publish` on the target machine or a build server).
+> Once this branch is merged to `main`, update the links above to use `main` instead of the branch name.
 
 ---
 
