@@ -55,7 +55,7 @@ param(
     [int]   $ListenPort     = 5000,
     [string]$SigningSecret  = '',
     [string]$ServiceName    = 'PatchPlatformServer',
-    [string]$SourcePath     = (Resolve-Path "$PSScriptRoot\.."),
+    [string]$SourcePath     = $(if ($PSScriptRoot) { (Resolve-Path "$PSScriptRoot\..") } else { $PWD.Path }),
     [switch]$SkipPublish
 )
 

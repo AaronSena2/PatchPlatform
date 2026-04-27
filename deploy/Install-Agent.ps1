@@ -56,7 +56,7 @@ param(
     [string]$StatePath                = 'C:\ProgramData\PatchPlatform\Agent\state.json',
     [int]   $HeartbeatIntervalMinutes = 60,
     [string]$ServiceName              = 'PatchPlatformAgent',
-    [string]$SourcePath               = (Resolve-Path "$PSScriptRoot\.."),
+    [string]$SourcePath               = $(if ($PSScriptRoot) { (Resolve-Path "$PSScriptRoot\..") } else { $PWD.Path }),
     [switch]$SkipPublish
 )
 
