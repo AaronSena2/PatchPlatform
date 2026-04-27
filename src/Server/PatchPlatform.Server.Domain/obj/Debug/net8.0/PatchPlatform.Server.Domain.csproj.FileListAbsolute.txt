@@ -1,0 +1,12 @@
+/home/runner/work/PatchPlatform/PatchPlatform/src/Server/PatchPlatform.Server.Domain/bin/Debug/net8.0/PatchPlatform.Server.Domain.deps.json
+/home/runner/work/PatchPlatform/PatchPlatform/src/Server/PatchPlatform.Server.Domain/bin/Debug/net8.0/PatchPlatform.Server.Domain.dll
+/home/runner/work/PatchPlatform/PatchPlatform/src/Server/PatchPlatform.Server.Domain/bin/Debug/net8.0/PatchPlatform.Server.Domain.pdb
+/home/runner/work/PatchPlatform/PatchPlatform/src/Server/PatchPlatform.Server.Domain/obj/Debug/net8.0/PatchPlatform.Server.Domain.GeneratedMSBuildEditorConfig.editorconfig
+/home/runner/work/PatchPlatform/PatchPlatform/src/Server/PatchPlatform.Server.Domain/obj/Debug/net8.0/PatchPlatform.Server.Domain.AssemblyInfoInputs.cache
+/home/runner/work/PatchPlatform/PatchPlatform/src/Server/PatchPlatform.Server.Domain/obj/Debug/net8.0/PatchPlatform.Server.Domain.AssemblyInfo.cs
+/home/runner/work/PatchPlatform/PatchPlatform/src/Server/PatchPlatform.Server.Domain/obj/Debug/net8.0/PatchPlatform.Server.Domain.csproj.CoreCompileInputs.cache
+/home/runner/work/PatchPlatform/PatchPlatform/src/Server/PatchPlatform.Server.Domain/obj/Debug/net8.0/PatchPlatform.Server.Domain.sourcelink.json
+/home/runner/work/PatchPlatform/PatchPlatform/src/Server/PatchPlatform.Server.Domain/obj/Debug/net8.0/PatchPlatform.Server.Domain.dll
+/home/runner/work/PatchPlatform/PatchPlatform/src/Server/PatchPlatform.Server.Domain/obj/Debug/net8.0/refint/PatchPlatform.Server.Domain.dll
+/home/runner/work/PatchPlatform/PatchPlatform/src/Server/PatchPlatform.Server.Domain/obj/Debug/net8.0/PatchPlatform.Server.Domain.pdb
+/home/runner/work/PatchPlatform/PatchPlatform/src/Server/PatchPlatform.Server.Domain/obj/Debug/net8.0/ref/PatchPlatform.Server.Domain.dll
