@@ -4,6 +4,12 @@ using PatchPlatform.Server.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Support running as a Windows Service (sets correct ContentRoot automatically)
+builder.Host.UseWindowsService(options =>
+{
+    options.ServiceName = "PatchPlatform Server";
+});
+
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 
