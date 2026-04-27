@@ -4,6 +4,34 @@ An on-prem Windows third-party app patch management platform built with .NET 8, 
 
 ---
 
+## Downloads
+
+### Compiled release packages (self-contained win-x64)
+
+Built automatically by CI on every version tag and attached to GitHub Releases:
+
+> **[⬇ Download latest release](https://github.com/AaronSena2/PatchPlatform/releases/latest)**
+
+| Package | Contents |
+|---|---|
+| `PatchPlatform-Server-win-x64.zip` | Server executable + `Install-Server.ps1` + `Uninstall-Server.ps1` |
+| `PatchPlatform-Agent-win-x64.zip` | Agent executable + `Install-Agent.ps1` + `Uninstall-Agent.ps1` |
+
+### Install scripts (latest source)
+
+Download individual PowerShell scripts directly from the repository:
+
+| Script | Download |
+|---|---|
+| `Install-Server.ps1` | [⬇ Download](https://raw.githubusercontent.com/AaronSena2/PatchPlatform/main/deploy/Install-Server.ps1) |
+| `Uninstall-Server.ps1` | [⬇ Download](https://raw.githubusercontent.com/AaronSena2/PatchPlatform/main/deploy/Uninstall-Server.ps1) |
+| `Install-Agent.ps1` | [⬇ Download](https://raw.githubusercontent.com/AaronSena2/PatchPlatform/main/deploy/Install-Agent.ps1) |
+| `Uninstall-Agent.ps1` | [⬇ Download](https://raw.githubusercontent.com/AaronSena2/PatchPlatform/main/deploy/Uninstall-Agent.ps1) |
+
+> **Tip:** Use the release packages for production. Use the raw scripts when deploying from a source build (`dotnet publish` on the target machine or a build server).
+
+---
+
 ## Prerequisites
 
 | Requirement | Version |
