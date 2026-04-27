@@ -1,0 +1,143 @@
+name: CI / Build & Publish
+
+on:
+  push:
+    branches: [ main ]
+    tags:     [ 'v*.*.*' ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: write   # needed to upload release assets
+
+jobs:
+  # ── Build & Test ─────────────────────────────────────────────────────────────
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore PatchPlatform.slnx
+
+      - name: Build
+        run: dotnet build PatchPlatform.slnx --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test PatchPlatform.slnx --no-build --configuration Release --logger "trx;LogFileName=results.trx" --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/*.trx
+          retention-days: 14
+
+  # ── Publish self-contained Windows binaries (on version tags only) ────────────
+  publish:
+    name: Publish Release Artifacts
+    runs-on: ubuntu-latest
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # ── Server ──────────────────────────────────────────────────────────────
+      - name: Publish Server (win-x64, self-contained)
+        run: |
+          dotnet publish src/Server/PatchPlatform.Server.Web/PatchPlatform.Server.Web.csproj \
+            --configuration Release \
+            --runtime win-x64 \
+            --self-contained true \
+            --output publish/Server \
+            -p:PublishSingleFile=true \
+            -p:EnableCompressionInSingleFile=true
+
+      - name: Copy Server install scripts
+        run: |
+          cp deploy/Install-Server.ps1   publish/Server/
+          cp deploy/Uninstall-Server.ps1 publish/Server/
+
+      - name: Zip Server artifact
+        run: |
+          cd publish
+          zip -r PatchPlatform-Server-win-x64.zip Server/
+
+      # ── Agent ───────────────────────────────────────────────────────────────
+      - name: Publish Agent (win-x64, self-contained)
+        run: |
+          dotnet publish src/Agent/PatchPlatform.Agent.Service/PatchPlatform.Agent.Service.csproj \
+            --configuration Release \
+            --runtime win-x64 \
+            --self-contained true \
+            --output publish/Agent \
+            -p:PublishSingleFile=true \
+            -p:EnableCompressionInSingleFile=true
+
+      - name: Copy Agent install scripts
+        run: |
+          cp deploy/Install-Agent.ps1   publish/Agent/
+          cp deploy/Uninstall-Agent.ps1 publish/Agent/
+
+      - name: Zip Agent artifact
+        run: |
+          cd publish
+          zip -r PatchPlatform-Agent-win-x64.zip Agent/
+
+      # ── Upload artifacts ─────────────────────────────────────────────────────
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-packages
+          path: |
+            publish/PatchPlatform-Server-win-x64.zip
+            publish/PatchPlatform-Agent-win-x64.zip
+          retention-days: 30
+
+      # ── Create GitHub Release ─────────────────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: PatchPlatform ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
+          files: |
+            publish/PatchPlatform-Server-win-x64.zip
+            publish/PatchPlatform-Agent-win-x64.zip
+          body: |
+            ## PatchPlatform ${{ github.ref_name }}
+
+            ### Installation
+
+            #### Server
+            1. Download `PatchPlatform-Server-win-x64.zip` and extract it.
+            2. Open PowerShell as Administrator and run:
+               ```powershell
+               .\Install-Server.ps1 -SqlConnectionString "Server=.\SQLEXPRESS;Database=PatchPlatform;Trusted_Connection=True;TrustServerCertificate=True;"
+               ```
+            3. Open `http://localhost:5000/tokens` to generate an enrollment token.
+
+            #### Agent (run on each managed machine)
+            1. Download `PatchPlatform-Agent-win-x64.zip` and extract it.
+            2. Open PowerShell as Administrator and run:
+               ```powershell
+               .\Install-Agent.ps1 -ServerUrl http://<server>:5000 -EnrollmentToken <TOKEN>
+               ```
+
+            See [README.md](https://github.com/${{ github.repository }}/blob/main/README.md) for full documentation.

@@ -1,0 +1,56 @@
+@page "/devices"
+@using PatchPlatform.Server.Data
+@using PatchPlatform.Server.Domain
+@using Microsoft.EntityFrameworkCore
+@inject ServerDbContext DbContext
+
+<PageTitle>Devices</PageTitle>
+<h1>Devices</h1>
+
+@if (DeviceList == null)
+{
+    <p>Loading...</p>
+}
+else if (!DeviceList.Any())
+{
+    <p>No devices enrolled yet.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Device ID</th>
+                <th>Machine Name</th>
+                <th>OS Version</th>
+                <th>Agent Version</th>
+                <th>Enrolled At</th>
+                <th>Last Seen</th>
+                <th>Active</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var device in DeviceList)
+            {
+                <tr>
+                    <td><code>@device.Id</code></td>
+                    <td>@device.MachineName</td>
+                    <td>@device.OsVersion</td>
+                    <td>@device.AgentVersion</td>
+                    <td>@device.EnrolledAt.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td>@(device.LastSeenAt?.ToString("yyyy-MM-dd HH:mm") ?? "Never")</td>
+                    <td>@(device.IsActive ? "Yes" : "No")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Device>? DeviceList;
+
+    protected override async Task OnInitializedAsync()
+    {
+        DeviceList = await DbContext.Devices.OrderByDescending(d => d.EnrolledAt).ToListAsync();
+    }
+}

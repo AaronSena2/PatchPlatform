@@ -1,0 +1,37 @@
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">PatchPlatform</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span aria-hidden="true">&#x1f3e0;</span> Home
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="tokens">
+                <span aria-hidden="true">&#x1f511;</span> Enrollment Tokens
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="devices">
+                <span aria-hidden="true">&#x1f4bb;</span> Devices
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="jobs">
+                <span aria-hidden="true">&#x1f4cb;</span> Job Results
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="policy">
+                <span aria-hidden="true">&#x1f4dd;</span> Policy Editor
+            </NavLink>
+        </div>
+    </nav>
+</div>
