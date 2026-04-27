@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PatchPlatform.Agent.Core")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+31a8a9e3caccb4b6d51162d7068366d0840b64a6")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ba83be1e0b62c978706933a698764e86643b5f31")]
 [assembly: System.Reflection.AssemblyProductAttribute("PatchPlatform.Agent.Core")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PatchPlatform.Agent.Core")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

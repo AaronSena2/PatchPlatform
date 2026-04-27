@@ -146,7 +146,6 @@
 /home/runner/work/PatchPlatform/PatchPlatform/src/Server/PatchPlatform.Server.Web/obj/Debug/net8.0/staticwebassets.build.json.cache
 /home/runner/work/PatchPlatform/PatchPlatform/src/Server/PatchPlatform.Server.Web/obj/Debug/net8.0/staticwebassets.development.json
 /home/runner/work/PatchPlatform/PatchPlatform/src/Server/PatchPlatform.Server.Web/obj/Debug/net8.0/staticwebassets.build.endpoints.json
-/home/runner/work/PatchPlatform/PatchPlatform/src/Server/PatchPlatform.Server.Web/obj/Debug/net8.0/swae.build.ex.cache
 /home/runner/work/PatchPlatform/PatchPlatform/src/Server/PatchPlatform.Server.Web/obj/Debug/net8.0/PatchPla.E13C57A0.Up2Date
 /home/runner/work/PatchPlatform/PatchPlatform/src/Server/PatchPlatform.Server.Web/obj/Debug/net8.0/PatchPlatform.Server.Web.dll
 /home/runner/work/PatchPlatform/PatchPlatform/src/Server/PatchPlatform.Server.Web/obj/Debug/net8.0/refint/PatchPlatform.Server.Web.dll
