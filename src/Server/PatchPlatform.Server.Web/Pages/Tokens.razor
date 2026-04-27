@@ -1,0 +1,46 @@
+@page "/tokens"
+@using PatchPlatform.Server.Application
+@inject IEnrollmentService EnrollmentService
+
+<PageTitle>Enrollment Tokens</PageTitle>
+<h1>Enrollment Tokens</h1>
+
+<div class="mb-3">
+    <label>Expires At: <input type="datetime-local" @bind="ExpiresAt" /></label>
+    <label>Max Uses: <input type="number" @bind="MaxUses" min="1" /></label>
+    <button class="btn btn-primary" @onclick="GenerateToken">Generate Token</button>
+</div>
+
+@if (!string.IsNullOrEmpty(GeneratedToken))
+{
+    <div class="alert alert-success">
+        <strong>Token:</strong> <code>@GeneratedToken</code>
+        <br/><small>Copy this token — it will not be shown again.</small>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <div class="alert alert-danger">@ErrorMessage</div>
+}
+
+@code {
+    private DateTime ExpiresAt = DateTime.Now.AddDays(7);
+    private int MaxUses = 1;
+    private string? GeneratedToken;
+    private string? ErrorMessage;
+
+    private async Task GenerateToken()
+    {
+        ErrorMessage = null;
+        GeneratedToken = null;
+        try
+        {
+            GeneratedToken = await EnrollmentService.CreateTokenAsync(new DateTimeOffset(ExpiresAt, TimeZoneInfo.Local.GetUtcOffset(ExpiresAt)), MaxUses);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+    }
+}

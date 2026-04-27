@@ -1,0 +1,68 @@
+@page "/policy"
+@using PatchPlatform.Server.Application
+@inject IPolicyService PolicyService
+
+<PageTitle>Policy Editor</PageTitle>
+<h1>Policy Editor</h1>
+
+@if (CurrentPolicy != null)
+{
+    <p>Current version: <strong>@CurrentPolicy.Version</strong></p>
+}
+
+<div class="mb-3">
+    <label class="form-label">Name</label>
+    <input class="form-control" @bind="Name" />
+</div>
+<div class="mb-3">
+    <label class="form-label">Maintenance Window (e.g., 02:00-04:00 or Mon-Fri 02:00-04:00)</label>
+    <input class="form-control" @bind="MaintenanceWindow" />
+</div>
+<div class="mb-3">
+    <label class="form-label">Duration (minutes)</label>
+    <input type="number" class="form-control" @bind="DurationMinutes" />
+</div>
+<div class="mb-3 form-check">
+    <input type="checkbox" class="form-check-input" id="autoApprove" @bind="AutoApprove" />
+    <label class="form-check-label" for="autoApprove">Auto-Approve Updates</label>
+</div>
+<div class="mb-3">
+    <label class="form-label">Raw Policy JSON</label>
+    <textarea class="form-control" rows="8" @bind="RawJson"></textarea>
+</div>
+<button class="btn btn-primary" @onclick="SavePolicy">Save Policy (Increments Version)</button>
+
+@if (!string.IsNullOrEmpty(SaveResult))
+{
+    <div class="alert alert-success mt-2">@SaveResult</div>
+}
+
+@code {
+    private PatchPlatform.Shared.Contracts.PolicyDto? CurrentPolicy;
+    private string Name = "Default";
+    private string MaintenanceWindow = "02:00-04:00";
+    private int DurationMinutes = 120;
+    private bool AutoApprove = true;
+    private string RawJson = "{}";
+    private string? SaveResult;
+
+    protected override async Task OnInitializedAsync()
+    {
+        CurrentPolicy = await PolicyService.GetCurrentPolicyAsync();
+        if (CurrentPolicy != null)
+        {
+            MaintenanceWindow = CurrentPolicy.MaintenanceWindowCron;
+            DurationMinutes = CurrentPolicy.MaintenanceWindowDurationMinutes;
+            AutoApprove = CurrentPolicy.AutoApprove;
+            RawJson = CurrentPolicy.RawJson;
+        }
+    }
+
+    private async Task SavePolicy()
+    {
+        SaveResult = null;
+        var updated = await PolicyService.UpdatePolicyAsync(Name, MaintenanceWindow, DurationMinutes, AutoApprove, RawJson);
+        CurrentPolicy = await PolicyService.GetCurrentPolicyAsync();
+        SaveResult = $"Policy saved as version {updated.Version}";
+    }
+}

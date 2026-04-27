@@ -1,0 +1,39 @@
+## .NET / Visual Studio
+# Build outputs
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.userprefs
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+project.lock.json
+project.assets.json
+
+# Published output
+publish/
+out/
+
+# Rider
+.idea/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test results
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+# Local package store (runtime content, not source)
+src/Server/PatchPlatform.Server.Web/packages/

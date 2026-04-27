@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\PatchPlatform.Server.Domain\PatchPlatform.Server.Domain.csproj" />
+    <ProjectReference Include="..\PatchPlatform.Server.Data\PatchPlatform.Server.Data.csproj" />
+    <ProjectReference Include="..\..\Shared\PatchPlatform.Shared.Contracts\PatchPlatform.Shared.Contracts.csproj" />
+    <ProjectReference Include="..\..\Shared\PatchPlatform.Shared.Crypto\PatchPlatform.Shared.Crypto.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

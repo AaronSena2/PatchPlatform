@@ -1,0 +1,21 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Agent/">
+    <Project Path="src/Agent/PatchPlatform.Agent.Core/PatchPlatform.Agent.Core.csproj" />
+    <Project Path="src/Agent/PatchPlatform.Agent.Service/PatchPlatform.Agent.Service.csproj" />
+  </Folder>
+  <Folder Name="/src/Server/">
+    <Project Path="src/Server/PatchPlatform.Server.Application/PatchPlatform.Server.Application.csproj" />
+    <Project Path="src/Server/PatchPlatform.Server.Data/PatchPlatform.Server.Data.csproj" />
+    <Project Path="src/Server/PatchPlatform.Server.Domain/PatchPlatform.Server.Domain.csproj" />
+    <Project Path="src/Server/PatchPlatform.Server.Web/PatchPlatform.Server.Web.csproj" />
+  </Folder>
+  <Folder Name="/src/Shared/">
+    <Project Path="src/Shared/PatchPlatform.Shared.Contracts/PatchPlatform.Shared.Contracts.csproj" />
+    <Project Path="src/Shared/PatchPlatform.Shared.Crypto/PatchPlatform.Shared.Crypto.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PatchPlatform.Agent.Tests/PatchPlatform.Agent.Tests.csproj" />
+    <Project Path="tests/PatchPlatform.Server.Tests/PatchPlatform.Server.Tests.csproj" />
+  </Folder>
+</Solution>

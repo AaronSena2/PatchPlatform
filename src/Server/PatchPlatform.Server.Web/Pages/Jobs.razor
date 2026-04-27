@@ -1,0 +1,52 @@
+@page "/jobs"
+@using PatchPlatform.Server.Data
+@using PatchPlatform.Server.Domain
+@using Microsoft.EntityFrameworkCore
+@inject ServerDbContext DbContext
+
+<PageTitle>Job Results</PageTitle>
+<h1>Recent Job Results</h1>
+
+@if (JobList == null)
+{
+    <p>Loading...</p>
+}
+else if (!JobList.Any())
+{
+    <p>No job results yet.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Job ID</th>
+                <th>Device ID</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Items</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var job in JobList)
+            {
+                <tr>
+                    <td><code>@job.Id</code></td>
+                    <td><code>@job.DeviceId</code></td>
+                    <td>@job.Status</td>
+                    <td>@job.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td>@job.Items.Count</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<UpdateJob>? JobList;
+
+    protected override async Task OnInitializedAsync()
+    {
+        JobList = await DbContext.UpdateJobs.Include(j => j.Items).OrderByDescending(j => j.CreatedAt).Take(50).ToListAsync();
+    }
+}
