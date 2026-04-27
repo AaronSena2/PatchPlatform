@@ -7,6 +7,8 @@
     creates a Windows Service, runs device enrollment, and starts the service.
 
     Must be run as Administrator.
+    Re-running this script is safe: an existing service will be stopped,
+    reconfigured, and restarted.
 
 .PARAMETER ServerUrl
     Base URL of the PatchPlatform Server (e.g. http://patchserver:5000).
@@ -16,7 +18,7 @@
 
 .PARAMETER InstallPath
     Directory where the agent will be installed.
-    Default: C:\PatchPlatform\Agent
+    Default: C:\ProgramData\PatchPlatform\Agent
 
 .PARAMETER StatePath
     Path to the agent state file (stores deviceId and secret).
@@ -32,7 +34,7 @@
 
 .PARAMETER SourcePath
     Root of the repository (contains PatchPlatform.slnx).
-    Default: parent directory of this script.
+    Default: parent directory of this script (or current directory as fallback).
 
 .PARAMETER SkipPublish
     Skip the dotnet publish step (use pre-built artifacts already in InstallPath).
@@ -52,11 +54,11 @@ param(
     [Parameter(Mandatory)]
     [string]$EnrollmentToken,
 
-    [string]$InstallPath              = 'C:\PatchPlatform\Agent',
+    [string]$InstallPath              = 'C:\ProgramData\PatchPlatform\Agent',
     [string]$StatePath                = 'C:\ProgramData\PatchPlatform\Agent\state.json',
     [int]   $HeartbeatIntervalMinutes = 60,
     [string]$ServiceName              = 'PatchPlatformAgent',
-    [string]$SourcePath               = $(if ($PSScriptRoot) { (Resolve-Path "$PSScriptRoot\..") } else { $PWD.Path }),
+    [string]$SourcePath               = '',
     [switch]$SkipPublish
 )
 
@@ -67,24 +69,51 @@ function Write-Step([string]$msg) { Write-Host "`n==> $msg" -ForegroundColor Cya
 function Write-OK([string]$msg)   { Write-Host "    OK: $msg" -ForegroundColor Green }
 function Write-Warn([string]$msg) { Write-Host "    WARN: $msg" -ForegroundColor Yellow }
 
+# ── Resolve SourcePath robustly ──────────────────────────────────────────────
+if ([string]::IsNullOrWhiteSpace($SourcePath)) {
+    $scriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { $PWD.Path }
+    $candidate = (Resolve-Path (Join-Path $scriptDir '..') -ErrorAction SilentlyContinue)?.Path
+    if ($candidate -and (Test-Path (Join-Path $candidate 'PatchPlatform.slnx'))) {
+        $SourcePath = $candidate
+    } else {
+        $candidate2 = (Resolve-Path $scriptDir -ErrorAction SilentlyContinue)?.Path
+        if ($candidate2 -and (Test-Path (Join-Path $candidate2 'PatchPlatform.slnx'))) {
+            $SourcePath = $candidate2
+        } else {
+            $SourcePath = $PWD.Path
+        }
+    }
+}
+
 # ── 1. Prerequisites ─────────────────────────────────────────────────────────
 Write-Step 'Checking prerequisites'
 
 if (-not $SkipPublish) {
     $dotnet = Get-Command dotnet -ErrorAction SilentlyContinue
     if (-not $dotnet) {
-        throw '.NET SDK not found. Install .NET 8 SDK from https://dotnet.microsoft.com/download/dotnet/8.0'
+        throw '.NET SDK not found. Install .NET 8 SDK from https://dotnet.microsoft.com/download/dotnet/8.0 and ensure it is on PATH.'
     }
     $sdkVersion = & dotnet --version
     Write-OK ".NET SDK $sdkVersion found"
+
+    $slnFile = Join-Path $SourcePath 'PatchPlatform.slnx'
+    if (-not (Test-Path $slnFile)) {
+        throw "Repository root not found at '$SourcePath' (PatchPlatform.slnx missing). " +
+              "Pass -SourcePath pointing to the repo root, or run this script from the repo root."
+    }
+    Write-OK "Repository root: $SourcePath"
 }
 
-# Verify server is reachable (optional, non-fatal)
+# Verify server is reachable via /health — informational only, non-blocking.
+Write-Step 'Checking server reachability'
+$serverBaseUrl = $ServerUrl.TrimEnd('/')
+$healthUrl = "$serverBaseUrl/health"
 try {
-    $null = Invoke-WebRequest -Uri "$($ServerUrl.TrimEnd('/'))/health" -TimeoutSec 5 -ErrorAction Stop 2>$null
-    Write-OK "Server reachable at $ServerUrl"
+    $response = Invoke-WebRequest -Uri $healthUrl -TimeoutSec 10 -UseBasicParsing -ErrorAction Stop
+    Write-OK "Server is reachable at $serverBaseUrl (HTTP $($response.StatusCode))"
 } catch {
-    Write-Warn "Could not reach server at $ServerUrl — will attempt enrollment after service start."
+    Write-Warn "Server did not respond at $healthUrl — enrollment will be attempted after service install."
+    Write-Warn "If enrollment fails, ensure the server is running and reachable from this machine."
 }
 
 # ── 2. Publish the application ────────────────────────────────────────────────
@@ -103,7 +132,7 @@ if (-not $SkipPublish) {
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed (exit $LASTEXITCODE)" }
     Write-OK "Published to $InstallPath"
 } else {
-    Write-Step 'Skipping publish (--SkipPublish)'
+    Write-Step 'Skipping publish (-SkipPublish)'
     if (-not (Test-Path $InstallPath)) {
         throw "InstallPath '$InstallPath' does not exist and -SkipPublish was set."
     }
@@ -122,7 +151,7 @@ $productionSettings = [ordered]@{
         }
     }
     Agent = [ordered]@{
-        ServerBaseUrl            = $ServerUrl.TrimEnd('/')
+        ServerBaseUrl            = $serverBaseUrl
         StatePath                = $StatePath
         HeartbeatIntervalMinutes = $HeartbeatIntervalMinutes
     }
@@ -135,13 +164,14 @@ Write-OK "appsettings.json written"
 Write-Step 'Enrolling device with server'
 $exePath = Join-Path $InstallPath 'PatchPlatform.Agent.Service.exe'
 if (-not (Test-Path $exePath)) {
-    throw "Executable not found: $exePath"
+    throw "Executable not found: $exePath. Ensure the publish step succeeded."
 }
 
 # Run enrollment (exits after completing)
-& $exePath --enroll --token $EnrollmentToken --server $ServerUrl
+& $exePath --enroll --token $EnrollmentToken --server $serverBaseUrl
 if ($LASTEXITCODE -ne 0) {
-    throw "Enrollment failed (exit $LASTEXITCODE). Check that the token is valid and the server is running."
+    throw "Enrollment failed (exit $LASTEXITCODE). Verify that the enrollment token is valid, " +
+          "has not expired, and that the server at $serverBaseUrl is running."
 }
 Write-OK "Device enrolled. State saved to $StatePath"
 
@@ -150,11 +180,13 @@ Write-Step "Installing Windows Service '$ServiceName'"
 $existing = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
 if ($existing) {
     Write-Warn "Service '$ServiceName' already exists — stopping and reconfiguring."
-    if ($existing.Status -eq 'Running') {
+    if ($existing.Status -ne 'Stopped') {
         Stop-Service -Name $ServiceName -Force
+        $existing.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(10))
         Write-OK 'Stopped existing service'
     }
-    & sc.exe config $ServiceName binpath= "`"$exePath`"" | Out-Null
+    & sc.exe config $ServiceName binpath= "`"$exePath`"" start= auto | Out-Null
+    Write-OK "Service '$ServiceName' reconfigured"
 } else {
     New-Service -Name $ServiceName `
                 -DisplayName 'PatchPlatform Agent' `
@@ -174,11 +206,11 @@ Write-OK "Service status: $($svc.Status)"
 Write-Host ''
 Write-Host '══════════════════════════════════════════════════════════' -ForegroundColor Green
 Write-Host '  PatchPlatform Agent installed successfully!' -ForegroundColor Green
-Write-Host "  Server : $ServerUrl" -ForegroundColor Green
+Write-Host "  Server : $serverBaseUrl" -ForegroundColor Green
 Write-Host "  State  : $StatePath" -ForegroundColor Green
-Write-Host "  Logs   : Get-EventLog -LogName Application -Source $ServiceName" -ForegroundColor Green
+Write-Host "  Logs   : Get-Content -Path '$InstallPath\logs\*.log' -Wait" -ForegroundColor Green
+Write-Host "           (or check Windows Event Viewer > Application log)" -ForegroundColor Green
 Write-Host '══════════════════════════════════════════════════════════' -ForegroundColor Green
 Write-Host ''
-Write-Host 'The agent will check in with the server every' `
-           "$HeartbeatIntervalMinutes minutes." -ForegroundColor Yellow
-Write-Host "View this device on the server: $ServerUrl/devices" -ForegroundColor Yellow
+Write-Host "The agent will check in with the server every $HeartbeatIntervalMinutes minutes." -ForegroundColor Yellow
+Write-Host "View this device on the server: $serverBaseUrl/devices" -ForegroundColor Yellow

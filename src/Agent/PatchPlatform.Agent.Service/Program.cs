@@ -18,7 +18,7 @@ builder.Services.AddHttpClient<IServerClient, ServerClient>(client =>
     client.BaseAddress = new Uri(server.TrimEnd('/') + "/");
 });
 
-builder.Services.AddScoped<IInventoryScanner, StubInventoryScanner>();
+builder.Services.AddScoped<IInventoryScanner, RegistryInventoryScanner>();
 builder.Services.AddScoped<AgentRuntime>();
 
 builder.Services.AddWindowsService();

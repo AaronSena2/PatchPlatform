@@ -8,14 +8,16 @@
     starts the service.
 
     Must be run as Administrator.
+    Re-running this script is safe: an existing service will be stopped,
+    reconfigured, and restarted.
 
 .PARAMETER InstallPath
     Directory where the server will be installed.
-    Default: C:\PatchPlatform\Server
+    Default: C:\ProgramData\PatchPlatform\Server
 
 .PARAMETER PackageStorePath
     Directory where patch packages are stored and served from /content/...
-    Default: C:\PatchPlatform\Packages
+    Default: C:\ProgramData\PatchPlatform\Packages
 
 .PARAMETER SqlConnectionString
     SQL Server connection string.
@@ -35,7 +37,7 @@
 
 .PARAMETER SourcePath
     Root of the repository (contains PatchPlatform.slnx).
-    Default: parent directory of this script.
+    Default: parent directory of this script (or current directory as fallback).
 
 .PARAMETER SkipPublish
     Skip the dotnet publish step (use pre-built artifacts already in InstallPath).
@@ -49,13 +51,13 @@
 #Requires -RunAsAdministrator
 [CmdletBinding(SupportsShouldProcess)]
 param(
-    [string]$InstallPath    = 'C:\PatchPlatform\Server',
-    [string]$PackageStorePath = 'C:\PatchPlatform\Packages',
+    [string]$InstallPath        = 'C:\ProgramData\PatchPlatform\Server',
+    [string]$PackageStorePath   = 'C:\ProgramData\PatchPlatform\Packages',
     [string]$SqlConnectionString = 'Server=.\SQLEXPRESS;Database=PatchPlatform;Trusted_Connection=True;TrustServerCertificate=True;',
-    [int]   $ListenPort     = 5000,
-    [string]$SigningSecret  = '',
-    [string]$ServiceName    = 'PatchPlatformServer',
-    [string]$SourcePath     = $(if ($PSScriptRoot) { (Resolve-Path "$PSScriptRoot\..") } else { $PWD.Path }),
+    [int]   $ListenPort         = 5000,
+    [string]$SigningSecret       = '',
+    [string]$ServiceName         = 'PatchPlatformServer',
+    [string]$SourcePath          = '',
     [switch]$SkipPublish
 )
 
@@ -66,16 +68,41 @@ function Write-Step([string]$msg) { Write-Host "`n==> $msg" -ForegroundColor Cya
 function Write-OK([string]$msg)   { Write-Host "    OK: $msg" -ForegroundColor Green }
 function Write-Warn([string]$msg) { Write-Host "    WARN: $msg" -ForegroundColor Yellow }
 
+# ── Resolve SourcePath robustly ──────────────────────────────────────────────
+if ([string]::IsNullOrWhiteSpace($SourcePath)) {
+    # Prefer the parent of the script file; fall back to the current directory.
+    $scriptDir = if ($PSScriptRoot) { $PSScriptRoot } else { $PWD.Path }
+    $candidate = (Resolve-Path (Join-Path $scriptDir '..') -ErrorAction SilentlyContinue)?.Path
+    if ($candidate -and (Test-Path (Join-Path $candidate 'PatchPlatform.slnx'))) {
+        $SourcePath = $candidate
+    } else {
+        # Check if we are already in the repo root
+        $candidate2 = (Resolve-Path $scriptDir -ErrorAction SilentlyContinue)?.Path
+        if ($candidate2 -and (Test-Path (Join-Path $candidate2 'PatchPlatform.slnx'))) {
+            $SourcePath = $candidate2
+        } else {
+            $SourcePath = $PWD.Path
+        }
+    }
+}
+
 # ── 1. Prerequisites ─────────────────────────────────────────────────────────
 Write-Step 'Checking prerequisites'
 
 if (-not $SkipPublish) {
     $dotnet = Get-Command dotnet -ErrorAction SilentlyContinue
     if (-not $dotnet) {
-        throw '.NET SDK not found. Install .NET 8 SDK from https://dotnet.microsoft.com/download/dotnet/8.0'
+        throw '.NET SDK not found. Install .NET 8 SDK from https://dotnet.microsoft.com/download/dotnet/8.0 and ensure it is on PATH.'
     }
     $sdkVersion = & dotnet --version
     Write-OK ".NET SDK $sdkVersion found"
+
+    $slnFile = Join-Path $SourcePath 'PatchPlatform.slnx'
+    if (-not (Test-Path $slnFile)) {
+        throw "Repository root not found at '$SourcePath' (PatchPlatform.slnx missing). " +
+              "Pass -SourcePath pointing to the repo root, or run this script from the repo root."
+    }
+    Write-OK "Repository root: $SourcePath"
 }
 
 # ── 2. Generate signing secret if not supplied ────────────────────────────────
@@ -104,7 +131,7 @@ if (-not $SkipPublish) {
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed (exit $LASTEXITCODE)" }
     Write-OK "Published to $InstallPath"
 } else {
-    Write-Step 'Skipping publish (--SkipPublish)'
+    Write-Step 'Skipping publish (-SkipPublish)'
     if (-not (Test-Path $InstallPath)) {
         throw "InstallPath '$InstallPath' does not exist and -SkipPublish was set."
     }
@@ -139,17 +166,20 @@ Write-OK "appsettings.json written"
 Write-Step "Installing Windows Service '$ServiceName'"
 $exePath = Join-Path $InstallPath 'PatchPlatform.Server.Web.exe'
 if (-not (Test-Path $exePath)) {
-    throw "Executable not found: $exePath"
+    throw "Executable not found: $exePath. Ensure the publish step succeeded."
 }
 
 $existing = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
 if ($existing) {
     Write-Warn "Service '$ServiceName' already exists — stopping and reconfiguring."
-    if ($existing.Status -eq 'Running') {
+    if ($existing.Status -ne 'Stopped') {
         Stop-Service -Name $ServiceName -Force
+        # Wait up to 10 s for the service to stop
+        $existing.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(10))
         Write-OK 'Stopped existing service'
     }
-    & sc.exe config $ServiceName binpath= "`"$exePath`"" | Out-Null
+    & sc.exe config $ServiceName binpath= "`"$exePath`"" start= auto | Out-Null
+    Write-OK "Service '$ServiceName' reconfigured"
 } else {
     New-Service -Name $ServiceName `
                 -DisplayName 'PatchPlatform Server' `
@@ -185,8 +215,9 @@ Write-OK "Service status: $($svc.Status)"
 Write-Host ''
 Write-Host '══════════════════════════════════════════════════════════' -ForegroundColor Green
 Write-Host '  PatchPlatform Server installed successfully!' -ForegroundColor Green
-Write-Host "  URL : http://localhost:$ListenPort" -ForegroundColor Green
-Write-Host "  Logs: Get-EventLog -LogName Application -Source $ServiceName" -ForegroundColor Green
+Write-Host "  URL  : http://localhost:$ListenPort" -ForegroundColor Green
+Write-Host "  Logs : Get-Content -Path '$InstallPath\logs\*.log' -Wait" -ForegroundColor Green
+Write-Host "         (or check Windows Event Viewer > Application log for '$ServiceName')" -ForegroundColor Green
 Write-Host '══════════════════════════════════════════════════════════' -ForegroundColor Green
 Write-Host ''
 Write-Host 'Next step: open the Admin UI and generate an enrollment token.' -ForegroundColor Yellow

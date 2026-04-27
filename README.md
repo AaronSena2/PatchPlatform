@@ -17,37 +17,157 @@ Built automatically by CI on every version tag and attached to GitHub Releases:
 | `PatchPlatform-Server-win-x64.zip` | `PatchPlatform.Server.Web.exe` (single-file, self-contained) + `Install-Server.ps1` + `Uninstall-Server.ps1` |
 | `PatchPlatform-Agent-win-x64.zip` | `PatchPlatform.Agent.Service.exe` (single-file, self-contained) + `Install-Agent.ps1` + `Uninstall-Agent.ps1` |
 
-### Install scripts (latest source)
-
-Download individual PowerShell scripts directly from the repository:
+### Install scripts (main branch)
 
 | Script | Download |
 |---|---|
-| `Install-Server.ps1` | [⬇ Download](https://raw.githubusercontent.com/AaronSena2/PatchPlatform/copilot/add-net-8-solution-structure/deploy/Install-Server.ps1) |
-| `Uninstall-Server.ps1` | [⬇ Download](https://raw.githubusercontent.com/AaronSena2/PatchPlatform/copilot/add-net-8-solution-structure/deploy/Uninstall-Server.ps1) |
-| `Install-Agent.ps1` | [⬇ Download](https://raw.githubusercontent.com/AaronSena2/PatchPlatform/copilot/add-net-8-solution-structure/deploy/Install-Agent.ps1) |
-| `Uninstall-Agent.ps1` | [⬇ Download](https://raw.githubusercontent.com/AaronSena2/PatchPlatform/copilot/add-net-8-solution-structure/deploy/Uninstall-Agent.ps1) |
+| `Install-Server.ps1` | [⬇ Download](https://raw.githubusercontent.com/AaronSena2/PatchPlatform/main/deploy/Install-Server.ps1) |
+| `Uninstall-Server.ps1` | [⬇ Download](https://raw.githubusercontent.com/AaronSena2/PatchPlatform/main/deploy/Uninstall-Server.ps1) |
+| `Install-Agent.ps1` | [⬇ Download](https://raw.githubusercontent.com/AaronSena2/PatchPlatform/main/deploy/Install-Agent.ps1) |
+| `Uninstall-Agent.ps1` | [⬇ Download](https://raw.githubusercontent.com/AaronSena2/PatchPlatform/main/deploy/Uninstall-Agent.ps1) |
 
-> **Tip:** Use the release packages for production. Use the raw scripts when deploying from a source build (`dotnet publish` on the target machine or a build server).
-> Once this branch is merged to `main`, update the links above to use `main` instead of the branch name.
+> **Tip:** Use the release packages for production. Use the install scripts with `-SkipPublish` when you have pre-built artifacts, or without `-SkipPublish` to have the scripts run `dotnet publish` on the target machine.
 
 ---
 
 ## Prerequisites
 
-| Requirement | Version |
+| Requirement | Details |
 |---|---|
-| .NET SDK | 8.0 |
-| SQL Server Express or LocalDB | 2019 or later |
-| Windows (for Agent) | Windows 10/Server 2019+ |
+| .NET 8 SDK | Required on the machine running the install scripts (server + agent build) |
+| SQL Server Express or LocalDB | 2019 or later; SQL Express for production, LocalDB for dev |
+| Windows OS | Windows 10 / Windows Server 2019 or later (agent and server) |
+| PowerShell | 5.1 or later (included in Windows 10/Server 2016+) |
+| Administrator rights | Required by the install scripts to create Windows Services and firewall rules |
 
-Install .NET 8 SDK: https://dotnet.microsoft.com/download/dotnet/8.0
+### Installing prerequisites
 
-Install SQL Server Express (free): https://www.microsoft.com/en-us/sql-server/sql-server-downloads
+**Install .NET 8 SDK**
+```
+https://dotnet.microsoft.com/download/dotnet/8.0
+```
 
-LocalDB (for dev) ships with Visual Studio or can be installed via the SQL Server Express installer.
+**Install SQL Server Express (free)**
+```
+https://www.microsoft.com/en-us/sql-server/sql-server-downloads
+```
+Choose "Express" edition. During setup, note the instance name (default: `.\SQLEXPRESS`).
+
+**LocalDB for local development** ships with Visual Studio or can be installed via the SQL Server Express installer (select "LocalDB" feature). Connection string: `Server=(localdb)\mssqllocaldb;Database=PatchPlatformDev;Trusted_Connection=True;`
 
 ---
+
+## Install from Source (Enterprise / Script-based)
+
+This is the primary deployment method: the install scripts clone/copy the source, then run `dotnet publish` on the target machine.
+
+### Step 1 — Clone the repository on the target server
+
+```powershell
+git clone https://github.com/AaronSena2/PatchPlatform.git C:\src\PatchPlatform
+cd C:\src\PatchPlatform
+```
+
+### Step 2 — Install the Server
+
+Open PowerShell **as Administrator** and run:
+
+```powershell
+.\deploy\Install-Server.ps1 `
+    -SourcePath "C:\src\PatchPlatform" `
+    -SqlConnectionString "Server=.\SQLEXPRESS;Database=PatchPlatform;Trusted_Connection=True;TrustServerCertificate=True;"
+```
+
+The script will:
+1. Verify that `dotnet` and the solution file are present
+2. Run `dotnet publish` to build and publish the server
+3. Write a production `appsettings.json` (connection string, ports, signing secret)
+4. Apply EF Core database migrations automatically on first startup
+5. Create and start the `PatchPlatformServer` Windows Service
+6. Open the firewall port (default: 5000)
+
+**Common parameters:**
+
+| Parameter | Default | Description |
+|---|---|---|
+| `-SourcePath` | Auto-detected from script location | Repo root containing `PatchPlatform.slnx` |
+| `-InstallPath` | `C:\ProgramData\PatchPlatform\Server` | Where the server binary is deployed |
+| `-PackageStorePath` | `C:\ProgramData\PatchPlatform\Packages` | Where package files are stored |
+| `-SqlConnectionString` | SQL Express local | Connection string for the database |
+| `-ListenPort` | `5000` | HTTP port |
+| `-SigningSecret` | Auto-generated | HMAC secret for catalog signing (record this!) |
+| `-SkipPublish` | `$false` | Skip `dotnet publish` (use pre-built artifacts) |
+
+**Re-running** the script is safe — it stops, reconfigures, and restarts the existing service.
+
+### Step 3 — Verify the server is healthy
+
+```powershell
+Invoke-RestMethod http://localhost:5000/health
+```
+
+Expected response:
+```json
+{ "status": "ok", "version": "1.0.0.0", "utc": "2025-01-01T00:00:00+00:00" }
+```
+
+### Step 4 — Generate an enrollment token
+
+Open the admin UI: `http://localhost:5000/tokens`
+
+Or use curl:
+```bash
+# Use the admin UI at /tokens to generate a token — no auth required for prototype
+```
+
+### Step 5 — Install the Agent on each managed machine
+
+Open PowerShell **as Administrator** on the managed machine and run:
+
+```powershell
+.\deploy\Install-Agent.ps1 `
+    -SourcePath "C:\src\PatchPlatform" `
+    -ServerUrl "http://patchserver:5000" `
+    -EnrollmentToken "YOUR_TOKEN_HERE"
+```
+
+The script will:
+1. Check server reachability (non-blocking; warns if unreachable)
+2. Run `dotnet publish` to build the agent
+3. Write a production `appsettings.json`
+4. Run device enrollment (stores `deviceId` and `deviceSecret` in the state file)
+5. Create and start the `PatchPlatformAgent` Windows Service
+
+**Common parameters:**
+
+| Parameter | Default | Description |
+|---|---|---|
+| `-ServerUrl` | **Required** | Base URL of the PatchPlatform Server |
+| `-EnrollmentToken` | **Required** | One-time token from the server admin UI |
+| `-SourcePath` | Auto-detected | Repo root containing `PatchPlatform.slnx` |
+| `-InstallPath` | `C:\ProgramData\PatchPlatform\Agent` | Where the agent binary is deployed |
+| `-StatePath` | `C:\ProgramData\PatchPlatform\Agent\state.json` | Agent state file (deviceId + secret) |
+| `-HeartbeatIntervalMinutes` | `60` | How often the agent checks in |
+| `-SkipPublish` | `$false` | Skip `dotnet publish` |
+
+**Re-running** the script is safe — it re-enrolls and restarts the service.
+
+---
+
+## Typical Failures and Fixes
+
+| Symptom | Likely Cause | Fix |
+|---|---|---|
+| `dotnet: command not found` | .NET SDK not installed or not on PATH | Install .NET 8 SDK; re-open the terminal |
+| `PatchPlatform.slnx missing` | Wrong `-SourcePath` or script not run from repo root | Pass `-SourcePath` explicitly pointing to the repo root |
+| `Failed to apply database migrations` (server log) | SQL Server not running, wrong instance name, or connection string wrong | Check SQL Server service is running; verify instance name in connection string |
+| `Login failed for user` (SQL) | SQL auth issue | Use Windows auth (`Trusted_Connection=True`) or create a SQL login |
+| `Could not open a connection to SQL Server` | SQL Server port/pipe blocked | Check firewall, enable TCP/IP in SQL Server Configuration Manager |
+| `Enrollment failed (exit 1)` | Token expired, invalid, or max-use exhausted | Generate a new token from `/tokens` on the server |
+| `Server did not respond at /health` (agent install warning) | Server not yet started or wrong URL | Ensure server service is running; check port in `-ServerUrl` |
+| Service starts then stops immediately | Missing appsettings, wrong paths, or exception at startup | Check Windows Event Viewer > Application log for the error |
+
+
 
 ## Solution Structure
 
@@ -63,20 +183,25 @@ src/
     PatchPlatform.Server.Application/   Use-case services (enrollment, auth, policy, catalog, inventory, jobs)
     PatchPlatform.Server.Web/           ASP.NET Core + Blazor Server UI + REST API controllers
   Agent/
-    PatchPlatform.Agent.Core/           AgentRuntime, ServerClient, InventoryScanner, StateStore
+    PatchPlatform.Agent.Core/           AgentRuntime, ServerClient, RegistryInventoryScanner, StateStore
     PatchPlatform.Agent.Service/        .NET Worker running as Windows Service
 tests/
   PatchPlatform.Server.Tests/           Unit tests: catalog signer
   PatchPlatform.Agent.Tests/            Unit tests: maintenance window parsing
+deploy/
+  Install-Server.ps1                    Server install script (from source)
+  Install-Agent.ps1                     Agent install script (from source)
+  Uninstall-Server.ps1                  Server uninstall script
+  Uninstall-Agent.ps1                   Agent uninstall script
 ```
 
 ---
 
-## How to Run the Server
+## How to Run the Server (Development)
 
 ### 1. Configure the database connection
 
-Edit `src/Server/PatchPlatform.Server.Web/appsettings.json`:
+Edit `src/Server/PatchPlatform.Server.Web/appsettings.Development.json`:
 
 ```json
 {
@@ -84,33 +209,36 @@ Edit `src/Server/PatchPlatform.Server.Web/appsettings.json`:
     "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=PatchPlatformDev;Trusted_Connection=True;MultipleActiveResultSets=true"
   },
   "PatchPlatform": {
-    "PackageStorePath": "C:\\PatchPlatform\\Packages",
+    "PackageStorePath": "C:\\ProgramData\\PatchPlatform\\Packages",
     "CatalogSigningSecret": "CHANGE_ME_IN_PRODUCTION_USE_A_LONG_RANDOM_SECRET"
   }
 }
 ```
 
-> **Note:** For production, use a full SQL Server Express connection string, e.g.:
-> `Server=.\\SQLEXPRESS;Database=PatchPlatform;Trusted_Connection=True;`
+> **Note:** For production, use a full SQL Server Express connection string:
+> `Server=.\\SQLEXPRESS;Database=PatchPlatform;Trusted_Connection=True;TrustServerCertificate=True;`
 
-### 2. Apply EF Core migrations (first run)
-
-Migrations are applied automatically on startup via `db.Database.Migrate()`.
-
-To manually apply or create migrations:
-```bash
-cd src/Server/PatchPlatform.Server.Web
-dotnet ef database update --project ../PatchPlatform.Server.Data
-```
-
-### 3. Run the server
+### 2. Run the server
 
 ```bash
 cd src/Server/PatchPlatform.Server.Web
 dotnet run
 ```
 
+EF Core migrations are applied automatically on startup. If the database does not exist, it will be created. If the connection string is invalid or the server is unreachable, the error is logged clearly and startup continues (the `/health` endpoint will still respond).
+
+To manually apply or create migrations:
+```bash
+dotnet ef database update --project src/Server/PatchPlatform.Server.Data --startup-project src/Server/PatchPlatform.Server.Web
+```
+
 The server starts on `http://localhost:5000` (or the port shown in console output).
+
+### 3. Verify health
+
+```bash
+curl http://localhost:5000/health
+```
 
 ---
 
@@ -134,22 +262,9 @@ The server starts on `http://localhost:5000` (or the port shown in console outpu
 3. Click **Generate Token**
 4. Copy the token shown
 
-### Via curl
-```bash
-# No token needed for POST /api/tokens — use the UI
-# But enrollment is done by agent using the token
-```
-
 ---
 
 ## How to Enroll the Agent
-
-### Prerequisites
-Build the agent:
-```bash
-cd src/Agent/PatchPlatform.Agent.Service
-dotnet build
-```
 
 ### Enroll (one-time)
 ```bash

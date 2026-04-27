@@ -30,22 +30,53 @@ builder.Services.AddControllers();
 
 var app = builder.Build();
 
+// ── Apply EF Core migrations on startup ──────────────────────────────────────
+// Safe for prototype; gate behind a config flag for production if desired.
+try
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<ServerDbContext>();
+    db.Database.Migrate();
+    app.Logger.LogInformation("Database migrations applied successfully.");
+}
+catch (Exception ex)
+{
+    app.Logger.LogError(ex,
+        "Failed to apply database migrations. " +
+        "Verify that the connection string '{ConnectionString}' is correct and the database server is reachable.",
+        builder.Configuration.GetConnectionString("DefaultConnection"));
+    // Do not abort startup — server can still serve the health endpoint and UI pages.
+}
+
+// ── PackageStorePath: resolve to absolute path first, then ensure it exists ──
+var rawPackageStorePath = builder.Configuration["PatchPlatform:PackageStorePath"] ?? "packages";
+var absolutePackagePath = Path.IsPathRooted(rawPackageStorePath)
+    ? rawPackageStorePath
+    : Path.Combine(app.Environment.ContentRootPath, rawPackageStorePath);
+
+if (!Directory.Exists(absolutePackagePath))
+{
+    Directory.CreateDirectory(absolutePackagePath);
+    app.Logger.LogInformation("Created package store directory: {Path}", absolutePackagePath);
+}
+
 app.UseStaticFiles();
 app.UseRouting();
-
-var packageStorePath = builder.Configuration["PatchPlatform:PackageStorePath"] ?? "packages";
-if (!Directory.Exists(packageStorePath))
-    Directory.CreateDirectory(packageStorePath);
-
-var absolutePackagePath = Path.IsPathRooted(packageStorePath)
-    ? packageStorePath
-    : Path.Combine(app.Environment.ContentRootPath, packageStorePath);
 
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(absolutePackagePath),
     RequestPath = "/content"
 });
+
+// ── Health endpoint (unauthenticated) ─────────────────────────────────────────
+var serverVersion = typeof(Program).Assembly.GetName().Version?.ToString() ?? "1.0.0";
+app.MapGet("/health", () => Results.Ok(new
+{
+    status = "ok",
+    version = serverVersion,
+    utc = DateTimeOffset.UtcNow
+})).AllowAnonymous();
 
 app.MapControllers();
 app.MapBlazorHub();
