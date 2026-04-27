@@ -64,7 +64,11 @@ This is the primary deployment method: the install scripts clone/copy the source
 ### Step 1 — Clone the repository on the target server
 
 ```powershell
-git clone https://github.com/AaronSena2/PatchPlatform.git C:\src\PatchPlatform
+if (Test-Path C:\src\PatchPlatform) {
+    git -C C:\src\PatchPlatform pull
+} else {
+    git clone https://github.com/AaronSena2/PatchPlatform.git C:\src\PatchPlatform
+}
 cd C:\src\PatchPlatform
 ```
 
@@ -72,7 +76,13 @@ cd C:\src\PatchPlatform
 
 Open PowerShell **as Administrator** and run:
 
+> **Note:** If PowerShell blocks the script with an "execution policy" error, run once as Administrator:
+> ```powershell
+> Set-ExecutionPolicy RemoteSigned -Scope LocalMachine
+> ```
+
 ```powershell
+cd C:\src\PatchPlatform
 .\deploy\Install-Server.ps1 `
     -SourcePath "C:\src\PatchPlatform" `
     -SqlConnectionString "Server=.\SQLEXPRESS;Database=PatchPlatform;Trusted_Connection=True;TrustServerCertificate=True;"
