@@ -14,8 +14,8 @@ Built automatically by CI on every version tag and attached to GitHub Releases:
 
 | Package | Contents |
 |---|---|
-| `PatchPlatform-Server-win-x64.zip` | Server executable + `Install-Server.ps1` + `Uninstall-Server.ps1` |
-| `PatchPlatform-Agent-win-x64.zip` | Agent executable + `Install-Agent.ps1` + `Uninstall-Agent.ps1` |
+| `PatchPlatform-Server-win-x64.zip` | `PatchPlatform.Server.Web.exe` (single-file, self-contained) + `Install-Server.ps1` + `Uninstall-Server.ps1` |
+| `PatchPlatform-Agent-win-x64.zip` | `PatchPlatform.Agent.Service.exe` (single-file, self-contained) + `Install-Agent.ps1` + `Uninstall-Agent.ps1` |
 
 ### Install scripts (latest source)
 

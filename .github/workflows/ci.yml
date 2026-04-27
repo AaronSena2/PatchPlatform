@@ -64,7 +64,8 @@ jobs:
             --runtime win-x64 \
             --self-contained true \
             --output publish/Server \
-            -p:PublishSingleFile=false
+            -p:PublishSingleFile=true \
+            -p:EnableCompressionInSingleFile=true
 
       - name: Copy Server install scripts
         run: |
@@ -84,7 +85,8 @@ jobs:
             --runtime win-x64 \
             --self-contained true \
             --output publish/Agent \
-            -p:PublishSingleFile=false
+            -p:PublishSingleFile=true \
+            -p:EnableCompressionInSingleFile=true
 
       - name: Copy Agent install scripts
         run: |
