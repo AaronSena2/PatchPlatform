@@ -80,7 +80,9 @@ if (-not $SkipPublish) {
 
 # ── 2. Generate signing secret if not supplied ────────────────────────────────
 if ([string]::IsNullOrWhiteSpace($SigningSecret)) {
-    $bytes = [System.Security.Cryptography.RandomNumberGenerator]::GetBytes(48)
+    $rng = [System.Security.Cryptography.RNGCryptoServiceProvider]::new()
+    $bytes = New-Object byte[] 48
+    $rng.GetBytes($bytes)
     $SigningSecret = [Convert]::ToBase64String($bytes)
     Write-Warn "No -SigningSecret supplied. Generated: $SigningSecret"
     Write-Warn "Record this value — you will need it if you reinstall."
